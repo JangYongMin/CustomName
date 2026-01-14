@@ -11,6 +11,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+// ⭐ 추가됨: 웅크리기 이벤트 임포트
+import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
@@ -25,7 +27,6 @@ public final class Customname extends JavaPlugin implements Listener {
     private FileConfiguration userDataConfig;
     private PacketManager packetManager;
 
-    // 플레이어별 가짜 엔티티 ID 추적
     private final Map<Player, Integer> fakeEntityIds = new HashMap<>();
 
     @Override
@@ -44,15 +45,12 @@ public final class Customname extends JavaPlugin implements Listener {
 
         getCommand("customname").setExecutor(new NicknameCommand(this));
 
-        // ⭐ 이미 접속한 플레이어들의 닉네임 복원
         getServer().getScheduler().runTaskLater(this, () -> {
             for (Player player : getServer().getOnlinePlayers()) {
                 String nickname = getNickname(player);
                 if (nickname != null) {
                     setupHideNameTeam(player);
                     player.playerListName(Component.text(nickname));
-
-                    // 다른 플레이어들에게 이 플레이어의 이름표 표시
                     for (Player other : getServer().getOnlinePlayers()) {
                         if (!other.equals(player)) {
                             packetManager.spawnFakeNameTag(other, player, nickname);
@@ -72,10 +70,26 @@ public final class Customname extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        // 모든 가짜 엔티티 제거
         if (packetManager != null) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 packetManager.removeAllFakeEntities(player);
+            }
+        }
+    }
+
+    // [기능 추가] 웅크리기(Shift) 감지 -> 이름표 흐릿하게
+    @EventHandler
+    public void onSneak(PlayerToggleSneakEvent event) {
+        Player target = event.getPlayer();
+        boolean isSneaking = event.isSneaking(); // 웅크리기 시작: true, 해제: false
+
+        // 닉네임이 설정된 플레이어만 처리
+        if (getNickname(target) == null) return;
+
+        // 다른 모든 플레이어들에게 변경된 투명도 정보 전송
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            if (!viewer.equals(target)) {
+                packetManager.updateSneakState(viewer, target, isSneaking);
             }
         }
     }
@@ -107,7 +121,6 @@ public final class Customname extends JavaPlugin implements Listener {
         return fakeEntityIds;
     }
 
-    // 실제 이름표를 숨기는 팀 설정
     public void setupHideNameTeam(Player player) {
         Scoreboard sb = Bukkit.getScoreboardManager().getMainScoreboard();
         Team team = sb.getTeam("hide_real_name");
@@ -134,23 +147,16 @@ public final class Customname extends JavaPlugin implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event){
         Player player = event.getPlayer();
-
-        // 실제 이름표 숨기기
         setupHideNameTeam(player);
-
         String nickname = getNickname(player);
         if (nickname != null) {
             player.playerListName(Component.text(nickname));
-
-            // ⭐ 모든 플레이어에게 이 플레이어의 가짜 이름표 생성
             Bukkit.getScheduler().runTaskLater(this, () -> {
                 for (Player online : Bukkit.getOnlinePlayers()) {
                     if (!online.equals(player)) {
                         packetManager.spawnFakeNameTag(online, player, nickname);
                     }
                 }
-
-                // ⭐ 접속한 플레이어에게 다른 모든 플레이어의 가짜 이름표 보여주기
                 for (Player other : Bukkit.getOnlinePlayers()) {
                     if (!other.equals(player)) {
                         String otherNickname = getNickname(other);
@@ -159,8 +165,7 @@ public final class Customname extends JavaPlugin implements Listener {
                         }
                     }
                 }
-            }, 20L); // 1초 후 실행
-
+            }, 20L);
             event.joinMessage(Component.text("[+] ").color(NamedTextColor.GREEN)
                     .append(Component.text(nickname).color(NamedTextColor.GOLD)));
         }
@@ -169,15 +174,12 @@ public final class Customname extends JavaPlugin implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event){
         Player player = event.getPlayer();
-
         for (Player online : getServer().getOnlinePlayers()) {
             if (!online.equals(player)) {
                 packetManager.removeFakeNameTag(online, player);
             }
         }
-        // 가짜 엔티티 ID 제거
         fakeEntityIds.remove(player);
-
         String nickname = getNickname(player);
         String name = (nickname != null) ? nickname : player.getName();
         event.quitMessage(Component.text("[-] ").color(NamedTextColor.RED)

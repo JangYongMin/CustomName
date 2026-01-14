@@ -38,7 +38,7 @@ public class NicknameCommand implements CommandExecutor {
         // 3. 실제 이름표 숨기기 (혹시 안 되어 있다면)
         plugin.setupHideNameTeam(player);
 
-        // 4. ⭐ 기존 가짜 엔티티 제거하고 새로 생성
+        // 4. 기존 가짜 엔티티 제거하고 새로 생성
         Bukkit.getScheduler().runTask(plugin, () -> {
             PacketManager pm = plugin.getPacketManager();
             for (Player online : Bukkit.getOnlinePlayers()) {
