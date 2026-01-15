@@ -5,7 +5,7 @@
 
 # ⚙️ CustomName 작동 원리 (Technical Mechanism)
 
-이 플러그인은 마인크래프트의 기본 이름표 시스템을 우회하여, **패킷 기반 가짜 엔티티(Packet-based Fake Entity)**와 **프로토콜 변조**를 통해 커스텀 닉네임을 구현합니다.
+본 플러그인은 마인크래프트의 기본 이름표 시스템을 우회하여, **패킷 기반 가짜 엔티티(Packet-based Fake Entity)**와 **프로토콜 변조**를 통해 커스텀 닉네임을 구현합니다.
 
 ### 1. 패킷 기반 가짜 엔티티 (Fake Entity via Packets)
 * **Text Display 활용**: 실제 서버 데이터베이스에 저장되는 엔티티가 아닌, 클라이언트에게만 보이는 `TEXT_DISPLAY` 엔티티를 패킷으로 생성합니다.
