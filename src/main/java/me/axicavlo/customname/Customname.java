@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
@@ -76,15 +77,15 @@ public final class Customname extends JavaPlugin implements Listener {
         String C8 = "\u001B[36m";   // 인디고 (어두운 하늘)
         String C9 = "\u001B[1;35m"; // 보라
         String C10 = "\u001B[35m";  // 핑크 (어두운 보라)
-        String title = C1+"C"+C2+"u"+C3+"s"+C4+"t"+C5+"o"+C6+"m"+C7+"N"+C8+"a"+C9+"m"+C10+"e";
+        String title = C1 + "C" + C2 + "u" + C3 + "s" + C4 + "t" + C5 + "o" + C6 + "m" + C7 + "N" + C8 + "a" + C9 + "m" + C10 + "e";
 
         console.sendMessage(C2 + "---------------------------" + RST);
         console.sendMessage(" " + RST);
-        console.sendMessage("       [" + RST  + title + RST  + "]" + RST);
+        console.sendMessage("       [" + RST + title + RST + "]" + RST);
         console.sendMessage("   플러그인이 구동되었습니다." + RST);
         console.sendMessage(" " + RST);
         console.sendMessage(C2 + "---------------------------" + RST);
-        console.sendMessage(C7 + "       version 0.0.2" + RST);
+        console.sendMessage(C7 + "       version 0.0.3" + RST);
         console.sendMessage(C2 + "---------------------------" + RST);
     }
 
@@ -158,7 +159,11 @@ public final class Customname extends JavaPlugin implements Listener {
         userDataFile = new File(getDataFolder(), "userdata.yml");
 
         if (!userDataFile.exists()) {
-            try { userDataFile.createNewFile(); } catch (IOException e) { e.printStackTrace(); }
+            try {
+                userDataFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         userDataConfig = YamlConfiguration.loadConfiguration(userDataFile);
     }
@@ -166,11 +171,15 @@ public final class Customname extends JavaPlugin implements Listener {
     /**
      * 플레이어의 닉네임을 파일에 저장합니다.
      */
-    public void saveNickname(Player player, String nickname){
+    public void saveNickname(Player player, String nickname) {
         String uuid = player.getUniqueId().toString();
         userDataConfig.set(uuid + ".nickname", nickname);
 
-        try { userDataConfig.save(userDataFile); } catch (IOException e) { e.printStackTrace(); }
+        try {
+            userDataConfig.save(userDataFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public String getNickname(Player player) {
@@ -206,12 +215,7 @@ public final class Customname extends JavaPlugin implements Listener {
     public void onChat(AsyncChatEvent event) {
         String nickname = getNickname(event.getPlayer());
         if (nickname != null) {
-            event.renderer((source, sourceDisplayName, message, viewer) ->
-                    Component.text("<")
-                            .append(Component.text(nickname))
-                            .append(Component.text("> "))
-                            .append(message)
-            );
+            event.renderer((source, sourceDisplayName, message, viewer) -> Component.text("<").append(Component.text(nickname)).append(Component.text("> ")).append(message));
         }
     }
 
@@ -226,13 +230,9 @@ public final class Customname extends JavaPlugin implements Listener {
         // 1. 본인의 입장 메시지 및 탭 리스트 처리
         if (nickname != null) {
             player.playerListName(Component.text(nickname));
-            event.joinMessage(Component.text("[+] ")
-                    .color(NamedTextColor.GREEN)
-                    .append(Component.text(nickname).color(NamedTextColor.GOLD)));
+            event.joinMessage(Component.text("[+] ").color(NamedTextColor.GREEN).append(Component.text(nickname).color(NamedTextColor.GOLD)));
         } else {
-            event.joinMessage(Component.text("[+] ")
-                    .color(NamedTextColor.GREEN)
-                    .append(Component.text(player.getName()).color(NamedTextColor.GOLD)));
+            event.joinMessage(Component.text("[+] ").color(NamedTextColor.GREEN).append(Component.text(player.getName()).color(NamedTextColor.GOLD)));
             removeHideNameTeam(player); // 닉네임 없으면 바닐라 이름표 노출
         }
 
@@ -266,7 +266,7 @@ public final class Customname extends JavaPlugin implements Listener {
      * 플레이어 퇴장 시 가짜 엔티티를 정리합니다.
      */
     @EventHandler
-    public void onQuit(PlayerQuitEvent event){
+    public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
 
         for (Player online : getServer().getOnlinePlayers()) {
@@ -279,8 +279,7 @@ public final class Customname extends JavaPlugin implements Listener {
         String nickname = getNickname(player);
         String name = (nickname != null) ? nickname : player.getName();
 
-        event.quitMessage(Component.text("[-] ").color(NamedTextColor.RED)
-                .append(Component.text(name).color(NamedTextColor.GOLD)));
+        event.quitMessage(Component.text("[-] ").color(NamedTextColor.RED).append(Component.text(name).color(NamedTextColor.GOLD)));
     }
 
     /**
@@ -337,5 +336,34 @@ public final class Customname extends JavaPlugin implements Listener {
                 }
             }
         }, 20L); // 1초 지연
+    }
+    @EventHandler
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+
+        // 1. [제거] 이전 월드의 플레이어들에게서 내 이름표 삭제
+        for (Player other : event.getFrom().getPlayers()) {
+            packetManager.removeFakeNameTag(other, player);
+        }
+
+        // 2. [생성] 지연 로딩 (월드 로딩 대기)
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            // 새 월드의 모든 플레이어를 순회
+            for (Player other : player.getWorld().getPlayers()) {
+                if (other.equals(player)) continue;
+
+                // A. 내 이름표를 새 월드 사람들에게 보여줌
+                String myNickname = getNickname(player);
+                if (myNickname != null) {
+                    packetManager.spawnFakeNameTag(other, player, myNickname);
+                }
+
+                // B. 새 월드에 있던 사람들의 이름표를 나(player)에게 보여줌
+                String otherNickname = getNickname(other);
+                if (otherNickname != null) {
+                    packetManager.spawnFakeNameTag(player, other, otherNickname);
+                }
+            }
+        }, 30L); // 1.5초 지연
     }
 }

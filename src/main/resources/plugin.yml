@@ -1,5 +1,5 @@
 name: customname
-version: '0.0.2'
+version: '0.0.3'
 main: me.axicavlo.customname.Customname
 api-version: '1.21'
 depend: [ProtocolLib]

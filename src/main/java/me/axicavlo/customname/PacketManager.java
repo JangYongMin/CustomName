@@ -197,16 +197,22 @@ public class PacketManager {
                             mount.getIntegers().write(0, target.getEntityId()); // 말(플레이어)
                             mount.getIntegerArrays().write(0, new int[]{fakeEntityId}); // 기수(가짜 이름표)
                             protocolManager.sendServerPacket(viewer, mount);
-                        } catch (Exception e) { e.printStackTrace(); }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     }, 1L);
 
-                } catch (Exception e) { e.printStackTrace(); }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }, 2L);
 
             // 엔티티 ID 맵에 저장
             fakeEntities.computeIfAbsent(viewer.getUniqueId(), k -> new ConcurrentHashMap<>()).put(target.getUniqueId(), fakeEntityId);
 
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -235,7 +241,9 @@ public class PacketManager {
             meta.getDataValueCollectionModifier().write(0, metadata);
             protocolManager.sendServerPacket(viewer, meta);
 
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void removeAllFakeEntities(Player watcher) {
@@ -247,7 +255,9 @@ public class PacketManager {
             PacketContainer destroy = protocolManager.createPacket(PacketType.Play.Server.ENTITY_DESTROY);
             destroy.getIntLists().write(0, idsToRemove);
             protocolManager.sendServerPacket(watcher, destroy);
-        } catch (Exception e) { plugin.getLogger().warning("전체 제거 실패: " + e.getMessage()); }
+        } catch (Exception e) {
+            plugin.getLogger().warning("전체 제거 실패: " + e.getMessage());
+        }
     }
 
     public void removeFakeNameTag(Player watcher, Player target) {
@@ -261,6 +271,8 @@ public class PacketManager {
             PacketContainer destroy = protocolManager.createPacket(PacketType.Play.Server.ENTITY_DESTROY);
             destroy.getIntLists().write(0, List.of(fakeId));
             protocolManager.sendServerPacket(watcher, destroy);
-        } catch (Exception e) { plugin.getLogger().warning("개별 제거 실패: " + e.getMessage()); }
+        } catch (Exception e) {
+            plugin.getLogger().warning("개별 제거 실패: " + e.getMessage());
+        }
     }
 }
